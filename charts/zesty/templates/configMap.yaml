@@ -7,7 +7,9 @@ metadata:
     app.kubernetes.io/name: "{{ include "zesty-k8s.fullname" . }}"
 data:
   ORG_ID: "{{ .Values.orgID }}"
+  PODMINUTEMETRICS_ENABLED: "{{ .Values.podMinuteMetrics.enabled }}"
   PATHS_MOUNTPATH: "{{ .Values.persistence.mountPath }}"
+  STORAGE_SIZE: "{{ .Values.persistence.spec.resources.requests.storage }}"
   {{- if .Values.prometheus.url }}
   PROMETHEUS_SERVER_ENDPOINT: "{{ .Values.prometheus.url }}"
   {{- end }}
@@ -21,6 +23,7 @@ data:
   DB_BEARER_TOKEN: "{{ .Values.prometheus.bearerToken }}"
   {{- end }}
   {{- if .Values.awsAthena.enabled }}
+  ATHENA_ENABLED: "{{ .Values.awsAthena.enabled }}"
   ATHENA_PROJECT_ID: "{{ .Values.awsAthena.athenaProjectID }}"
   ATHENA_BUCKET_NAME: "{{ .Values.awsAthena.athenaBucketName }}"
   ATHENA_REGION: "{{ .Values.awsAthena.athenaRegion }}"
@@ -29,16 +32,30 @@ data:
   ATHENA_WORKGROUP: "{{ .Values.awsAthena.athenaWorkgroup }}"
   ATHENA_CATALOG: "{{ .Values.awsAthena.athenaCatalog }}"
   {{- end }}
+  {{- if .Values.assumeRole.enabled }}
+  MASTER_PAYER_ARN: "{{ .Values.assumeRole.masterRoleArn }}"
+  EXTERNAL_ID: "{{ .Values.assumeRole.externalID }}"
+  {{- end }}
   {{- if .Values.s3override.enabled }}
   S3BUCKET: "{{ .Values.s3override.bucket }}"
   REGION: "{{ .Values.s3override.region }}"
+  {{- end }}
+  LOG_LEVEL: "{{ .Values.log.level }}"
+  LOG_REMOTE: "{{ .Values.log.remote }}"
+  {{- if .Values.metadata.enabled }}
+  METADATA_ACCOUNTID: "{{ .Values.metadata.accountID }}"
+  METADATA_REGION: "{{ .Values.metadata.region }}"
+  METADATA_CLUSTERNAME: "{{ .Values.metadata.clusterName }}"
   {{- end }}
   {{- if .Values.grpc.enabled }}
   GRPC_PORT: "{{ .Values.grpc.server.port }}"
   MANAGER_HOST: "{{ .Values.grpc.client.endpoint }}"
   MANAGER_PORT: "{{ .Values.grpc.client.port }}"
   {{- end -}}
+  {{- if .Values.awsCluster.enabled }}
   {{- if ne .Values.awsCluster.accessKeyID "" }}
   AWS_ACCESS_KEY_ID: "{{ .Values.awsCluster.accessKeyID }}"
   AWS_SECRET_ACCESS_KEY: "{{ .Values.awsCluster.secretAccessKey }}"
   {{- end }}
+  {{- end }}
+  SECRET_NAME: "{{ include "zesty-k8s.secret" . }}"

@@ -15,6 +15,8 @@ spec:
       app.kubernetes.io/name: "{{ include "zesty-k8s.fullname" . }}"
   template:
     metadata:
+      annotations:
+        timestamp: {{ now | quote }}
       labels:
         app.kubernetes.io/instance: "{{ include "zesty-k8s.fullname" . }}"
         app.kubernetes.io/name: "{{ include "zesty-k8s.fullname" . }}"
@@ -29,15 +31,15 @@ spec:
       {{- toYaml .Values.tolerations | nindent 10 }}
       {{- end }}
       initContainers:
-        - name: migrate
-          image: "{{ .Values.migrationImage.repository }}:{{ .Values.migrationImage.tag }}"
-          imagePullPolicy: {{ .Values.migrationImage.pullPolicy }}
+        - image: "{{ .Values.image.migrationRepository }}:{{ include "zesty-k8s.version" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          name: migrate
           volumeMounts:
             - mountPath: {{ .Values.persistence.mountPath }}
               name: {{ .Values.persistence.volumeName }}
           args: ["schema", "apply", "--url", "sqlite://{{ .Values.persistence.mountPath}}/zesty.db", "--dev-url", "sqlite://:memory:", "--to",  "file:///bin/pkg/db/schema.sql", "--auto-approve"]
       containers:
-        - image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        - image: "{{ .Values.image.repository }}:{{ include "zesty-k8s.version" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           name: "{{ include "zesty-k8s.name" . }}"
           ports:
@@ -73,16 +75,26 @@ spec:
           envFrom:
             - configMapRef:
                 name: "{{ include "zesty-k8s.configmap" . }}"
+          {{- if .Values.awsCluster.enabled }}
           {{- if eq .Values.awsCluster.accessKeyID "" }}
             - secretRef:
                 name: {{ .Values.awsCluster.secret.name }}
+          {{- end }}
           {{- end }}
           {{- if eq .Values.encryptedCredentials "" }}
             - secretRef:
                 name: {{ .Values.secret.name | quote }}
           {{- end }}
-          {{- if ne .Values.encryptedCredentials ""}}
           env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          {{- if ne .Values.encryptedCredentials ""}}
             - name: ENCRYPTED_CREDENTIALS
               value: {{ .Values.encryptedCredentials | quote }}
           {{- end }}
